@@ -52,3 +52,9 @@
 [submodule "auxil/gen-zam"]
 	path = auxil/gen-zam
 	url = https://github.com/zeek/gen-zam
+[submodule "auxil/spicy-plugin"]
+	path = auxil/spicy-plugin
+	url = https://github.com/zeek/spicy-plugin
+[submodule "auxil/spicy"]
+	path = auxil/spicy/spicy
+	url = https://github.com/zeek/spicy

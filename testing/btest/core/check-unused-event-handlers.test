@@ -1,4 +1,5 @@
 # This test should print a warning that the event handler is never invoked.
+# @TEST-REQUIRES: test -x ${BUILD}/auxil/spicy/spicy/bin/spicy-config
 # @TEST-EXEC: zeek -b %INPUT check_for_unused_event_handlers=T
 # @TEST-EXEC: TEST_DIFF_CANONIFIER=$SCRIPTS/diff-sort btest-diff .stderr
 

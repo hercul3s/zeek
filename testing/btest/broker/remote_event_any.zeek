@@ -1,3 +1,5 @@
+# @TEST-REQUIRES: test -x ${BUILD}/auxil/spicy/spicy/bin/spicy-config
+#
 # @TEST-PORT: BROKER_PORT
 #
 # @TEST-EXEC: btest-bg-run recv "zeek -b ../recv.zeek >recv.out"

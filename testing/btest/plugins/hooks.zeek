@@ -1,4 +1,5 @@
 # @TEST-REQUIRES: test "${ZEEK_ZAM}" != "1"
+# @TEST-REQUIRES: test -x ${BUILD}/auxil/spicy/spicy/bin/spicy-config
 # @TEST-EXEC: ${DIST}/auxil/zeek-aux/plugin-support/init-plugin -u . Demo Hooks
 # @TEST-EXEC: cp -r %DIR/hooks-plugin/* .
 # @TEST-EXEC: ./configure --zeek-dist=${DIST} && make
