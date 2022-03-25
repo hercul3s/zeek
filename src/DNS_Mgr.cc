@@ -1392,9 +1392,17 @@ void DNS_Mgr::Process()
 	{
 	// If iosource_mgr says that we got a result on the socket fd, we don't have to ask c-ares
 	// to retrieve it for us. We have the file descriptor already, just call ares_process_fd()
-	// with it.
-	for ( int fd : socket_fds )
-		ares_process_fd(channel, fd, ARES_SOCKET_BAD);
+	// with it. Unfortunately, we may also have sockets close during this call, so we need to
+	// to make a copy of the list first. Having a list change while looping over it can
+	// cause segfaults.
+	decltype(socket_fds) temp_fds{socket_fds};
+
+	for ( int fd : temp_fds )
+		{
+		// double check this one wasn't removed already before trying to process it
+		if ( socket_fds.count(fd) != 0 )
+			ares_process_fd(channel, fd, ARES_SOCKET_BAD);
+		}
 
 	IssueAsyncRequests();
 	}
