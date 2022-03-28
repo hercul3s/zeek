@@ -44,7 +44,7 @@ enum DNS_MgrMode
 	DNS_FAKE, // don't look up names, just return dummy results
 	};
 
-class DNS_Mgr final : public iosource::IOSource
+class DNS_Mgr : public iosource::IOSource
 	{
 public:
 	/**
@@ -221,12 +221,6 @@ public:
 	static TableValPtr empty_addr_set();
 
 	/**
-	 * This method is used to call the private Process() method during unit testing
-	 * and shouldn't be used otherwise.
-	 */
-	void TestProcess();
-
-	/**
 	 * Returns the full path to the file used to store the DNS cache.
 	 */
 	std::string CacheFile() const { return cache_name; }
@@ -236,7 +230,7 @@ public:
 	 */
 	void RegisterSocket(int fd, bool active);
 
-private:
+protected:
 	friend class LookupCallback;
 	friend class DNS_Request;
 

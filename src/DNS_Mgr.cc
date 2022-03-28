@@ -1430,14 +1430,6 @@ void DNS_Mgr::GetStats(Stats* stats)
 		}
 	}
 
-void DNS_Mgr::TestProcess()
-	{
-	// Only allow usage of this method when running unit tests.
-	assert(doctest::is_running_in_test);
-	Resolve();
-	IssueAsyncRequests();
-	}
-
 void DNS_Mgr::AsyncRequest::Resolved(const char* name)
 	{
 	for ( const auto& cb : callbacks )
@@ -1534,6 +1526,26 @@ public:
 	bool timeout = false;
 	};
 
+/**
+ * Derived testing version of DNS_Mgr so that the Process() method can be exposed
+ * publically. If new unit tests are added, this class should be used over using
+ * DNS_Mgr directly.
+ */
+class TestDNS_Mgr final : public DNS_Mgr
+	{
+public:
+	explicit TestDNS_Mgr(DNS_MgrMode mode) : DNS_Mgr(mode) { }
+	void Process();
+	};
+
+void TestDNS_Mgr::Process()
+	{
+	// Only allow usage of this method when running unit tests.
+	assert(doctest::is_running_in_test);
+	Resolve();
+	IssueAsyncRequests();
+	}
+
 TEST_CASE("dns_mgr priming")
 	{
 	char prefix[] = "/tmp/zeek-unit-test-XXXXXX";
@@ -1542,13 +1554,13 @@ TEST_CASE("dns_mgr priming")
 	// Create a manager to prime the cache, make a few requests, and the save
 	// the result. This tests that the priming code will create the requests but
 	// wait for Resolve() to actually make the requests.
-	DNS_Mgr mgr(DNS_PRIME);
+	TestDNS_Mgr mgr(DNS_PRIME);
 	mgr.SetDir(tmpdir);
 	mgr.InitPostScript();
 
 	auto host_result = mgr.LookupHost("one.one.one.one");
 	REQUIRE(host_result != nullptr);
-	CHECK(host_result->EqualTo(DNS_Mgr::empty_addr_set()));
+	CHECK(host_result->EqualTo(TestDNS_Mgr::empty_addr_set()));
 
 	IPAddr ones("1.1.1.1");
 	auto addr_result = mgr.LookupAddr(ones);
@@ -1563,7 +1575,7 @@ TEST_CASE("dns_mgr priming")
 	REQUIRE(mgr.Save());
 
 	// Make a second DNS manager and reload the cache that we just saved.
-	DNS_Mgr mgr2(DNS_FORCE);
+	TestDNS_Mgr mgr2(DNS_FORCE);
 	dns_mgr = &mgr2;
 	mgr2.SetDir(tmpdir);
 	mgr2.InitPostScript();
@@ -1572,7 +1584,7 @@ TEST_CASE("dns_mgr priming")
 	// data out of the cache.
 	host_result = mgr2.LookupHost("one.one.one.one");
 	REQUIRE(host_result != nullptr);
-	CHECK_FALSE(host_result->EqualTo(DNS_Mgr::empty_addr_set()));
+	CHECK_FALSE(host_result->EqualTo(TestDNS_Mgr::empty_addr_set()));
 
 	addr_result = mgr2.LookupAddr(ones);
 	REQUIRE(addr_result != nullptr);
@@ -1588,7 +1600,7 @@ TEST_CASE("dns_mgr alternate server")
 	char* old_server = getenv("ZEEK_DNS_RESOLVER");
 
 	setenv("ZEEK_DNS_RESOLVER", "1.1.1.1", 1);
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 
 	mgr.InitPostScript();
 
@@ -1598,7 +1610,7 @@ TEST_CASE("dns_mgr alternate server")
 
 	// FIXME: This won't run on systems without IPv6 connectivity.
 	// setenv("ZEEK_DNS_RESOLVER", "2606:4700:4700::1111", 1);
-	// DNS_Mgr mgr2(DNS_DEFAULT, true);
+	// TestDNS_Mgr mgr2(DNS_DEFAULT, true);
 	// mgr2.InitPostScript();
 	// result = mgr2.LookupAddr("1.1.1.1");
 	// mgr2.Resolve();
@@ -1614,7 +1626,7 @@ TEST_CASE("dns_mgr alternate server")
 
 TEST_CASE("dns_mgr default mode")
 	{
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 	mgr.InitPostScript();
 
 	IPAddr ones4("1.1.1.1");
@@ -1622,7 +1634,7 @@ TEST_CASE("dns_mgr default mode")
 
 	auto host_result = mgr.LookupHost("one.one.one.one");
 	REQUIRE(host_result != nullptr);
-	CHECK_FALSE(host_result->EqualTo(DNS_Mgr::empty_addr_set()));
+	CHECK_FALSE(host_result->EqualTo(TestDNS_Mgr::empty_addr_set()));
 
 	auto addrs_from_request = get_result_addresses(host_result);
 	auto it = std::find(addrs_from_request.begin(), addrs_from_request.end(), ones4);
@@ -1646,7 +1658,7 @@ TEST_CASE("dns_mgr default mode")
 
 TEST_CASE("dns_mgr async host")
 	{
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 	mgr.InitPostScript();
 
 	TestCallback cb{};
@@ -1657,7 +1669,7 @@ TEST_CASE("dns_mgr async host")
 	int count = 0;
 	while ( ! cb.done && (count < DNS_TIMEOUT + 1) )
 		{
-		mgr.TestProcess();
+		mgr.Process();
 		sleep(1);
 		if ( ! cb.timeout )
 			count++;
@@ -1677,7 +1689,7 @@ TEST_CASE("dns_mgr async host")
 
 TEST_CASE("dns_mgr async addr")
 	{
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 	mgr.InitPostScript();
 
 	TestCallback cb{};
@@ -1688,7 +1700,7 @@ TEST_CASE("dns_mgr async addr")
 	int count = 0;
 	while ( ! cb.done && (count < DNS_TIMEOUT + 1) )
 		{
-		mgr.TestProcess();
+		mgr.Process();
 		sleep(1);
 		if ( ! cb.timeout )
 			count++;
@@ -1703,7 +1715,7 @@ TEST_CASE("dns_mgr async addr")
 
 TEST_CASE("dns_mgr async text")
 	{
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 	mgr.InitPostScript();
 
 	TestCallback cb{};
@@ -1714,7 +1726,7 @@ TEST_CASE("dns_mgr async text")
 	int count = 0;
 	while ( ! cb.done && (count < DNS_TIMEOUT + 1) )
 		{
-		mgr.TestProcess();
+		mgr.Process();
 		sleep(1);
 		if ( ! cb.timeout )
 			count++;
@@ -1735,7 +1747,7 @@ TEST_CASE("dns_mgr timeouts")
 	// server that lets you connect but never returns any responses, always
 	// resulting in a timeout.
 	setenv("ZEEK_DNS_RESOLVER", "3.219.212.117", 1);
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 
 	mgr.InitPostScript();
 	auto addr_result = mgr.LookupAddr("1.1.1.1");
@@ -1761,7 +1773,7 @@ TEST_CASE("dns_mgr async timeouts")
 	// server that lets you connect but never returns any responses, always
 	// resulting in a timeout.
 	setenv("ZEEK_DNS_RESOLVER", "3.219.212.117", 1);
-	DNS_Mgr mgr(DNS_DEFAULT);
+	TestDNS_Mgr mgr(DNS_DEFAULT);
 	mgr.InitPostScript();
 
 	TestCallback cb{};
@@ -1772,7 +1784,7 @@ TEST_CASE("dns_mgr async timeouts")
 	int count = 0;
 	while ( ! cb.done && (count < DNS_TIMEOUT + 1) )
 		{
-		mgr.TestProcess();
+		mgr.Process();
 		sleep(1);
 		if ( ! cb.timeout )
 			count++;
