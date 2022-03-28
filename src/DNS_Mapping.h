@@ -15,7 +15,7 @@ class DNS_Mapping
 	{
 public:
 	DNS_Mapping() = delete;
-	DNS_Mapping(const char* host, struct hostent* h, uint32_t ttl, int type);
+	DNS_Mapping(std::string host, struct hostent* h, uint32_t ttl, int type);
 	DNS_Mapping(const IPAddr& addr, struct hostent* h, uint32_t ttl);
 	DNS_Mapping(FILE* f);
 

@@ -3659,7 +3659,7 @@ public:
 		}
 
 	// Overridden from zeek::detail::DNS_Mgr:Lookup:Callback.
-	void Resolved(const char* name) override
+	void Resolved(const std::string& name) override
 		{
 		zeek::Val* result = new zeek::StringVal(name);
 		trigger->Cache(call, result);

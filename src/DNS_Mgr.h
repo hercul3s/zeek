@@ -60,7 +60,7 @@ public:
 		 *
 		 * @param name The resulting name from the lookup.
 		 */
-		virtual void Resolved(const char* name){};
+		virtual void Resolved(const std::string& name){};
 
 		/**
 		 * Called when a name lookup finishes.
@@ -106,7 +106,7 @@ public:
 	 * @param host The hostname to lookup an address for.
 	 * @return A set of addresses for the host.
 	 */
-	TableValPtr LookupHost(const char* host);
+	TableValPtr LookupHost(const std::string& host);
 
 	/**
 	 * Looks up the hostname of a given address. This is a shorthand method for
@@ -130,7 +130,7 @@ public:
 	 * the type values defined in arpa/nameser.h or ares_nameser.h.
 	 * @return The requested data.
 	 */
-	ValPtr Lookup(const char* name, int request_type);
+	ValPtr Lookup(const std::string& name, int request_type);
 
 	/**
 	 * Looks up the address(es) of a given host. This is a shorthand method
@@ -140,7 +140,7 @@ public:
 	 * @param host The hostname to lookup an address for.
 	 * @param callback A callback object for handling the response.
 	 */
-	void LookupHost(const char* host, LookupCallback* callback);
+	void LookupHost(const std::string& host, LookupCallback* callback);
 
 	/**
 	 * Looks up the hostname of a given address. This is a shorthand method for
@@ -165,12 +165,12 @@ public:
 	 * the type values defined in arpa/nameser.h or ares_nameser.h.
 	 * @param callback A callback object for handling the response.
 	 */
-	void Lookup(const char* name, int request_type, LookupCallback* callback);
+	void Lookup(const std::string& name, int request_type, LookupCallback* callback);
 
 	/**
 	 * Sets the directory where to store DNS data when Save() is called.
 	 */
-	void SetDir(const char* arg_dir) { dir = arg_dir; }
+	void SetDir(const std::string& arg_dir) { dir = arg_dir; }
 
 	/**
 	 * Waits for responses to become available or a timeout to occur,
@@ -244,8 +244,8 @@ protected:
 	// Finish the request if we have a result.  If not, time it out if
 	// requested.
 	void CheckAsyncAddrRequest(const IPAddr& addr, bool timeout);
-	void CheckAsyncHostRequest(const char* host, bool timeout);
-	void CheckAsyncOtherRequest(const char* host, bool timeout, int request_type);
+	void CheckAsyncHostRequest(const std::string& host, bool timeout);
+	void CheckAsyncOtherRequest(const std::string& host, bool timeout, int request_type);
 
 	void Event(EventHandlerPtr e, DNS_Mapping* dm);
 	void Event(EventHandlerPtr e, DNS_Mapping* dm, ListValPtr l1, ListValPtr l2);
@@ -295,10 +295,12 @@ protected:
 		int type = 0;
 		bool processed = false;
 
-		AsyncRequest(const char* host, int request_type) : host(host), type(request_type) { }
+		AsyncRequest(std::string host, int request_type) : host(std::move(host)), type(request_type)
+			{
+			}
 		AsyncRequest(const IPAddr& addr) : addr(addr), type(T_PTR) { }
 
-		void Resolved(const char* name);
+		void Resolved(const std::string& name);
 		void Resolved(TableValPtr addrs);
 		void Timeout();
 		};

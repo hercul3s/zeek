@@ -187,11 +187,11 @@ struct CallbackArgs
 class DNS_Request
 	{
 public:
-	DNS_Request(const char* host, int request_type, bool async = false);
-	DNS_Request(const IPAddr& addr, bool async = false);
+	DNS_Request(std::string host, int request_type, bool async = false);
+	explicit DNS_Request(const IPAddr& addr, bool async = false);
 	~DNS_Request();
 
-	const char* Host() const { return host; }
+	std::string Host() const { return host; }
 	const IPAddr& Addr() const { return addr; }
 	int RequestType() const { return request_type; }
 	bool IsTxt() const { return request_type == 16; }
@@ -200,7 +200,7 @@ public:
 	void ProcessAsyncResult(bool timed_out, DNS_Mgr* mgr);
 
 private:
-	char* host = nullptr;
+	std::string host;
 	IPAddr addr;
 	int request_type = 0; // Query type
 	bool async = false;
@@ -210,8 +210,8 @@ private:
 
 uint16_t DNS_Request::request_id = 0;
 
-DNS_Request::DNS_Request(const char* host, int request_type, bool async)
-	: host(util::copy_string(host)), request_type(request_type), async(async)
+DNS_Request::DNS_Request(std::string host, int request_type, bool async)
+	: host(std::move(host)), request_type(request_type), async(async)
 	{
 	// We combine the T_A and T_AAAA requests together in one request, so set the type
 	// to T_A to make things easier in other parts of the code (mostly around lookups).
@@ -226,7 +226,6 @@ DNS_Request::DNS_Request(const IPAddr& addr, bool async) : addr(addr), async(asy
 
 DNS_Request::~DNS_Request()
 	{
-	delete[] host;
 	if ( query )
 		ares_free_string(query);
 	}
@@ -248,7 +247,7 @@ void DNS_Request::MakeRequest(ares_channel channel, DNS_Mgr* mgr)
 		// back in the same request if use ares_getaddrinfo() so we can store them both
 		// in the same mapping.
 		ares_addrinfo_hints hints = {ARES_AI_CANONNAME, AF_UNSPEC, 0, 0};
-		ares_getaddrinfo(channel, host, NULL, &hints, addrinfo_cb, req_data);
+		ares_getaddrinfo(channel, host.c_str(), NULL, &hints, addrinfo_cb, req_data);
 		}
 	else
 		{
@@ -312,9 +311,15 @@ static int get_ttl(unsigned char* abuf, int alen, int* ttl)
 	unsigned char* aptr = abuf + HFIXEDSZ;
 	status = ares_expand_name(aptr, abuf, alen, &hostname, &len);
 	if ( status != ARES_SUCCESS )
+		{
+		ares_free_string(hostname);
 		return status;
+		}
 	if ( aptr + len + QFIXEDSZ > abuf + alen )
+		{
+		ares_free_string(hostname);
 		return ARES_EBADRESP;
+		}
 
 	aptr += len + QFIXEDSZ;
 	ares_free_string(hostname);
@@ -651,21 +656,21 @@ void DNS_Mgr::InitPostScript()
 	LoadCache(cache_name);
 	}
 
-static TableValPtr fake_name_lookup_result(const char* name)
+static TableValPtr fake_name_lookup_result(const std::string& name)
 	{
 	hash128_t hash;
-	KeyedHash::StaticHash128(name, strlen(name), &hash);
+	KeyedHash::StaticHash128(name.c_str(), name.size(), &hash);
 	auto hv = make_intrusive<ListVal>(TYPE_ADDR);
 	hv->Append(make_intrusive<AddrVal>(reinterpret_cast<const uint32_t*>(&hash)));
 	return hv->ToSetVal();
 	}
 
-static const char* fake_lookup_result(const char* name, int request_type)
+static std::string fake_lookup_result(const std::string& name, int request_type)
 	{
-	return util::fmt("fake_lookup_result_%s_%s", request_type_string(request_type), name);
+	return util::fmt("fake_lookup_result_%s_%s", request_type_string(request_type), name.c_str());
 	}
 
-static const char* fake_addr_lookup_result(const IPAddr& addr)
+static std::string fake_addr_lookup_result(const IPAddr& addr)
 	{
 	return util::fmt("fake_addr_lookup_result_%s", addr.AsString().c_str());
 	}
@@ -676,13 +681,13 @@ static void resolve_lookup_cb(DNS_Mgr::LookupCallback* callback, TableValPtr res
 	delete callback;
 	}
 
-static void resolve_lookup_cb(DNS_Mgr::LookupCallback* callback, const char* result)
+static void resolve_lookup_cb(DNS_Mgr::LookupCallback* callback, const std::string& result)
 	{
 	callback->Resolved(result);
 	delete callback;
 	}
 
-ValPtr DNS_Mgr::Lookup(const char* name, int request_type)
+ValPtr DNS_Mgr::Lookup(const std::string& name, int request_type)
 	{
 	if ( request_type == T_A || request_type == T_AAAA )
 		return LookupHost(name);
@@ -708,8 +713,8 @@ ValPtr DNS_Mgr::Lookup(const char* name, int request_type)
 			}
 
 		case DNS_FORCE:
-			reporter->FatalError("can't find DNS entry for %s (req type %d / %s) in cache", name,
-			                     request_type, request_type_string(request_type));
+			reporter->FatalError("can't find DNS entry for %s (req type %d / %s) in cache",
+			                     name.c_str(), request_type, request_type_string(request_type));
 			return nullptr;
 
 		case DNS_DEFAULT:
@@ -730,7 +735,7 @@ ValPtr DNS_Mgr::Lookup(const char* name, int request_type)
 	return nullptr;
 	}
 
-TableValPtr DNS_Mgr::LookupHost(const char* name)
+TableValPtr DNS_Mgr::LookupHost(const std::string& name)
 	{
 	if ( mode == DNS_FAKE )
 		return fake_name_lookup_result(name);
@@ -757,7 +762,7 @@ TableValPtr DNS_Mgr::LookupHost(const char* name)
 			}
 
 		case DNS_FORCE:
-			reporter->FatalError("can't find DNS entry for %s in cache", name);
+			reporter->FatalError("can't find DNS entry for %s in cache", name.c_str());
 			return nullptr;
 
 		case DNS_DEFAULT:
@@ -822,7 +827,7 @@ StringValPtr DNS_Mgr::LookupAddr(const IPAddr& addr)
 		}
 	}
 
-void DNS_Mgr::LookupHost(const char* name, LookupCallback* callback)
+void DNS_Mgr::LookupHost(const std::string& name, LookupCallback* callback)
 	{
 	if ( mode == DNS_FAKE )
 		{
@@ -901,7 +906,7 @@ void DNS_Mgr::LookupAddr(const IPAddr& addr, LookupCallback* callback)
 	IssueAsyncRequests();
 	}
 
-void DNS_Mgr::Lookup(const char* name, int request_type, LookupCallback* callback)
+void DNS_Mgr::Lookup(const std::string& name, int request_type, LookupCallback* callback)
 	{
 	if ( mode == DNS_FAKE )
 		{
@@ -1289,7 +1294,7 @@ void DNS_Mgr::IssueAsyncRequests()
 		}
 	}
 
-void DNS_Mgr::CheckAsyncHostRequest(const char* host, bool timeout)
+void DNS_Mgr::CheckAsyncHostRequest(const std::string& host, bool timeout)
 	{
 	// Note that this code is a mirror of that for CheckAsyncAddrRequest.
 	auto i = asyncs.find(std::make_pair(T_A, host));
@@ -1344,7 +1349,7 @@ void DNS_Mgr::CheckAsyncAddrRequest(const IPAddr& addr, bool timeout)
 		}
 	}
 
-void DNS_Mgr::CheckAsyncOtherRequest(const char* host, bool timeout, int request_type)
+void DNS_Mgr::CheckAsyncOtherRequest(const std::string& host, bool timeout, int request_type)
 	{
 	// Note that this code is a mirror of that for CheckAsyncAddrRequest.
 
@@ -1430,7 +1435,7 @@ void DNS_Mgr::GetStats(Stats* stats)
 		}
 	}
 
-void DNS_Mgr::AsyncRequest::Resolved(const char* name)
+void DNS_Mgr::AsyncRequest::Resolved(const std::string& name)
 	{
 	for ( const auto& cb : callbacks )
 		{
@@ -1507,7 +1512,7 @@ class TestCallback : public DNS_Mgr::LookupCallback
 	{
 public:
 	TestCallback() { }
-	void Resolved(const char* name) override
+	void Resolved(const std::string& name) override
 		{
 		host_result = name;
 		done = true;

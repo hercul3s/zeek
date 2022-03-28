@@ -9,7 +9,7 @@
 namespace zeek::detail
 	{
 
-DNS_Mapping::DNS_Mapping(const char* host, struct hostent* h, uint32_t ttl, int type)
+DNS_Mapping::DNS_Mapping(std::string host, struct hostent* h, uint32_t ttl, int type)
 	{
 	Init(h);
 	req_host = host;
@@ -17,7 +17,7 @@ DNS_Mapping::DNS_Mapping(const char* host, struct hostent* h, uint32_t ttl, int 
 	req_type = type;
 
 	if ( names.empty() )
-		names.push_back(host);
+		names.push_back(std::move(host));
 	}
 
 DNS_Mapping::DNS_Mapping(const IPAddr& addr, struct hostent* h, uint32_t ttl)
