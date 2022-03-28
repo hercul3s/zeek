@@ -1438,6 +1438,7 @@ void DNS_Mgr::AsyncRequest::Resolved(const char* name)
 		if ( ! doctest::is_running_in_test )
 			delete cb;
 		}
+
 	callbacks.clear();
 	processed = true;
 	}
@@ -1450,6 +1451,7 @@ void DNS_Mgr::AsyncRequest::Resolved(TableValPtr addrs)
 		if ( ! doctest::is_running_in_test )
 			delete cb;
 		}
+
 	callbacks.clear();
 	processed = true;
 	}
@@ -1462,6 +1464,7 @@ void DNS_Mgr::AsyncRequest::Timeout()
 		if ( ! doctest::is_running_in_test )
 			delete cb;
 		}
+
 	callbacks.clear();
 	processed = true;
 	}
