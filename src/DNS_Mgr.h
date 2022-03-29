@@ -2,8 +2,7 @@
 
 #pragma once
 
-#include <ares.h>
-#include <ares_nameser.h>
+#include <netdb.h>
 #include <list>
 #include <map>
 #include <queue>
@@ -15,6 +14,18 @@
 #include "zeek/List.h"
 #include "zeek/iosource/IOSource.h"
 #include "zeek/util.h"
+
+// These are defined in ares headers but we don't want to have to include
+// those headers here and create install dependencies on them.
+struct ares_channeldata;
+typedef struct ares_channeldata* ares_channel;
+#ifndef T_PTR
+#define T_PTR 12
+#endif
+
+#ifndef T_TXT
+#define T_TXT 16
+#endif
 
 namespace zeek
 	{

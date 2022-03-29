@@ -5,6 +5,7 @@
 #include "zeek/zeek-config.h"
 
 #include <errno.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <sys/select.h>

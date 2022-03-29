@@ -16,8 +16,6 @@
 #include <cstdio>
 #include <time.h>
 
-#include <ares_nameser.h>
-
 #include "zeek/digest.h"
 #include "zeek/Reporter.h"
 #include "zeek/IPAddr.h"
