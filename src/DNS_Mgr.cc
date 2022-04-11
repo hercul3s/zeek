@@ -364,8 +364,6 @@ static void addrinfo_cb(void* arg, int status, int timeouts, struct ares_addrinf
 		// anything.
 		if ( status != ARES_ECANCELLED && status != ARES_EDESTRUCTION )
 			{
-			reporter->Error("Failed lookup of hostname: %s", ares_strerror(status));
-
 			// Insert something into the cache so that the request loop will end correctly.
 			// We use the DNS_TIMEOUT value as the TTL here since it's small enough that the
 			// failed response will expire soon, and because we don't have the TTL from the
@@ -448,8 +446,6 @@ static void query_cb(void* arg, int status, int timeouts, unsigned char* buf, in
 		// anything.
 		if ( status != ARES_ECANCELLED && status != ARES_EDESTRUCTION )
 			{
-			reporter->Error("Failure from DNS lookup: %s", ares_strerror(status));
-
 			// Insert something into the cache so that the request loop will end correctly.
 			// We use the DNS_TIMEOUT value as the TTL here since it's small enough that the
 			// failed response will expire soon, and because we don't have the TTL from the
@@ -489,7 +485,6 @@ static void query_cb(void* arg, int status, int timeouts, unsigned char* buf, in
 					mgr->AddResult(req, he.get(), ttl);
 				else
 					{
-					reporter->Error("Failed to parse PTR response: %s", ares_strerror(status));
 					// See above for why DNS_TIMEOUT here.
 					mgr->AddResult(req, nullptr, DNS_TIMEOUT);
 					}
@@ -519,7 +514,6 @@ static void query_cb(void* arg, int status, int timeouts, unsigned char* buf, in
 					}
 				else
 					{
-					reporter->Error("Failed to parse TXT response: %s", ares_strerror(status));
 					// See above for why DNS_TIMEOUT here.
 					mgr->AddResult(req, nullptr, DNS_TIMEOUT);
 					}
