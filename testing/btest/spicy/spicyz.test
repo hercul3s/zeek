@@ -1,0 +1,26 @@
+# @TEST-DOC: Smoke test for a custom Spicy analyzer hooked into Zeek.
+#
+# @TEST-REQUIRES: test -x ${BUILD}/src/builtin-plugins/spicy-plugin/bin/spicyz
+# @TEST-EXEC: ${BUILD}/src/builtin-plugins/spicy-plugin/bin/spicyz test.spicy test.evt -o test.hlto
+# @TEST-EXEC: zeek -NN test.hlto | grep -q ANALYZER_SPICY_TEST
+# @TEST-EXEC: zeek -r ${TRACES}/http/post.trace test.hlto "Spicy::enable_print = T;" >output 2>&1
+# @TEST-EXEC: btest-diff output
+
+# @TEST-START-FILE test.spicy
+module test;
+
+import zeek;
+
+public type Dummy = unit {
+    # Consume all data. We split data into lines and log the number of lines and the lines when done.
+    data: bytes &eod &convert=$$.split(b"\r\n");
+
+    on %done { print |self.data|, self; }
+};
+# @TEST-END-FILE
+
+# @TEST-START-FILE test.evt
+protocol analyzer spicy::Test over TCP:
+    parse with test::Dummy,
+    port 80/tcp;
+# @TEST-END-FILE
