@@ -111,11 +111,11 @@ event zeek_init()
 	Broker::subscribe(node_topic);
 
 	# Events automatically sent to the Management agent.
-	local events: vector of any = [
+	local node_to_agent_events: vector of any = [
 	    Management::Node::API::node_dispatch_response,
 	    Management::Node::API::notify_node_hello
 	    ];
 
-	for ( i in events )
-		Broker::auto_publish(node_topic, events[i]);
+	for ( i in node_to_agent_events )
+		Broker::auto_publish(node_topic, node_to_agent_events[i]);
 	}

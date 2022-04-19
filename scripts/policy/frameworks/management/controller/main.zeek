@@ -817,8 +817,8 @@ event zeek_init()
 	Broker::subscribe(Management::Agent::topic_prefix);
 	Broker::subscribe(Management::Controller::topic);
 
-	# Events sent to the client:
-	local events: vector of any = [
+	# Response events sent to the client:
+	local controller_to_client_events: vector of any = [
 	    Management::Controller::API::get_instances_response,
 	    Management::Controller::API::set_configuration_response,
 	    Management::Controller::API::get_nodes_response,
@@ -826,8 +826,9 @@ event zeek_init()
 	    Management::Controller::API::test_timeout_response
 	    ];
 
-	for ( i in events )
-		Broker::auto_publish(Management::Controller::topic, events[i]);
+	for ( i in controller_to_client_events )
+		Broker::auto_publish(Management::Controller::topic,
+		    controller_to_client_events[i]);
 
 	Management::Log::info("controller is live");
 	}

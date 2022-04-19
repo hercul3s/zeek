@@ -97,7 +97,8 @@ function supervisor_create(nc: Supervisor::NodeConfig)
 	{
 	local req = Management::Request::create();
 	req$supervisor_state = SupervisorState($node = nc$name);
-	event SupervisorControl::create_request(req$id, nc);
+	Broker::publish(SupervisorControl::topic_prefix,
+	    SupervisorControl::create_request, req$id, nc);
 	Management::Log::info(fmt("issued supervisor create for %s, %s", nc$name, req$id));
 	}
 
@@ -105,7 +106,8 @@ function supervisor_destroy(node: string)
 	{
 	local req = Management::Request::create();
 	req$supervisor_state = SupervisorState($node = node);
-	event SupervisorControl::destroy_request(req$id, node);
+	Broker::publish(SupervisorControl::topic_prefix,
+	    SupervisorControl::destroy_request, req$id, node);
 	Management::Log::info(fmt("issued supervisor destroy for %s, %s", node, req$id));
 	}
 
@@ -305,7 +307,8 @@ event Management::Agent::API::get_nodes_request(reqid: string)
 	local req = Management::Request::create();
 	req$parent_id = reqid;
 
-	event SupervisorControl::status_request(req$id, "");
+	Broker::publish(SupervisorControl::topic_prefix,
+	    SupervisorControl::status_request, req$id, "");
 	Management::Log::info(fmt("issued supervisor status, %s", req$id));
 	}
 
@@ -547,8 +550,8 @@ event zeek_init()
 	Broker::subscribe(SupervisorControl::topic_prefix);
 	Broker::subscribe(Management::Node::node_topic);
 
-	# Auto-publish a bunch of events. Glob patterns or module-level
-	# auto-publish would be helpful here.
+	# Auto-publish a bunch of response events and notifications
+	# to the controller.
 	local agent_to_controller_events: vector of any = [
 	    Management::Agent::API::get_nodes_response,
 	    Management::Agent::API::set_configuration_response,
@@ -563,17 +566,6 @@ event zeek_init()
 
 	for ( i in agent_to_controller_events )
 		Broker::auto_publish(agent_topic, agent_to_controller_events[i]);
-
-	local agent_to_sup_events: vector of any = [
-	    SupervisorControl::create_request,
-	    SupervisorControl::status_request,
-	    SupervisorControl::destroy_request,
-	    SupervisorControl::restart_request,
-	    SupervisorControl::stop_request
-	    ];
-
-	for ( i in agent_to_sup_events )
-		Broker::auto_publish(SupervisorControl::topic_prefix, agent_to_sup_events[i]);
 
 	# Establish connectivity with the controller.
 	if ( Management::Agent::controller$address != "0.0.0.0" )
